@@ -1,0 +1,39 @@
+{
+  "name": "projecta",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local SFX and video library for editors",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build && electron-builder --win portable",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "chokidar": "latest",
+    "electron-store": "latest",
+    "ffmpeg-static": "latest",
+    "ffprobe-static": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest",
+    "wavesurfer.js": "latest"
+  },
+  "devDependencies": {
+    "concurrently": "latest",
+    "electron": "latest",
+    "electron-builder": "latest",
+    "vitest": "latest",
+    "wait-on": "latest"
+  },
+  "build": {
+    "appId": "com.projecta.desktop",
+    "productName": "ProjectA",
+    "files": ["dist/**/*", "electron/**/*", "package.json"],
+    "asarUnpack": ["node_modules/ffmpeg-static/**/*", "node_modules/ffprobe-static/**/*"],
+    "win": { "target": "portable", "artifactName": "ProjectA-${version}.exe" }
+  }
+}
