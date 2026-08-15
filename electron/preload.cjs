@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('projectA', {
+  platform: process.platform,
   chooseFolders: () => ipcRenderer.invoke('library:choose-folders'),
   scan: () => ipcRenderer.invoke('library:scan'),
   clearLibrary: () => ipcRenderer.invoke('library:clear'),

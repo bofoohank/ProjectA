@@ -6,7 +6,9 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "build": "vite build && electron-builder --win portable",
+    "build": "vite build",
+    "dist:win": "vite build && electron-builder --win portable",
+    "dist:mac": "vite build && electron-builder --mac dmg zip --arm64",
     "preview": "vite preview",
     "test": "vitest run"
   },
@@ -32,8 +34,10 @@
   "build": {
     "appId": "com.projecta.desktop",
     "productName": "ProjectA",
-    "files": ["dist/**/*", "electron/**/*", "build/icon.ico", "package.json"],
+    "files": ["dist/**/*", "electron/**/*", "build/icon.ico", "build/icon.png", "package.json"],
     "asarUnpack": ["node_modules/ffmpeg-static/**/*", "node_modules/ffprobe-static/**/*"],
-    "win": { "target": "portable", "artifactName": "ProjectA-${version}.exe", "icon": "build/icon.ico" }
+    "win": { "target": "portable", "artifactName": "ProjectA-${version}-Windows.exe", "icon": "build/icon.ico" },
+    "mac": { "target": ["dmg", "zip"], "artifactName": "ProjectA-${version}-macOS-${arch}.${ext}", "icon": "build/icon.png", "category": "public.app-category.video", "identity": null },
+    "dmg": { "title": "ProjectA ${version}" }
   }
 }

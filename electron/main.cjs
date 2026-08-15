@@ -163,7 +163,8 @@ async function scanLibrary() {
 }
 
 function createWindow() {
-  win = new BrowserWindow({ width: 1440, height: 900, minWidth: 1050, minHeight: 680, backgroundColor: '#0b0d10', icon: path.join(__dirname, '..', 'build', 'icon.ico'), titleBarStyle: 'hidden', titleBarOverlay: { color: '#0b0d10', symbolColor: '#aeb5c0', height: 42 }, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false } });
+  const windowIcon = path.join(__dirname, '..', 'build', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
+  win = new BrowserWindow({ width: 1440, height: 900, minWidth: 1050, minHeight: 680, backgroundColor: '#0b0d10', icon: windowIcon, titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden', titleBarOverlay: { color: '#0b0d10', symbolColor: '#aeb5c0', height: 42 }, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false } });
   if (app.isPackaged) win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   else win.loadURL('http://localhost:5173');
   if (process.argv.includes('--smoke-test')) win.webContents.once('did-finish-load', () => app.exit(0));
