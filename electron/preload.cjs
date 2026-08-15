@@ -1,5 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
-contextBridge.exposeInMainWorld('frameVault', {
+contextBridge.exposeInMainWorld('projectA', {
   chooseFolders: () => ipcRenderer.invoke('library:choose-folders'),
   scan: () => ipcRenderer.invoke('library:scan'),
   getState: () => ipcRenderer.invoke('library:get-state'),

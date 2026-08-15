@@ -1,4 +1,4 @@
-# FrameVault
+# ProjectA
 
 Ứng dụng desktop quản lý SFX, audio, GIF và video dành cho editor.
 
@@ -19,4 +19,4 @@ File portable sẽ được tạo trong thư mục `dist` hoặc `release` tùy 
 
 ## Dữ liệu
 
-FrameVault chỉ đọc file media. Metadata (tag, favorite, collection và index) được lưu trong thư mục ứng dụng của người dùng bằng `electron-store`; file gốc không bị sửa hoặc di chuyển.
+ProjectA chỉ đọc file media. Metadata (tag, favorite, collection và index) được lưu trong thư mục ứng dụng của người dùng bằng `electron-store`; file gốc không bị sửa hoặc di chuyển.

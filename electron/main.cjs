@@ -11,7 +11,7 @@ const VIDEO = new Set(['.mp4', '.mov', '.mkv', '.avi', '.webm', '.m4v', '.gif'])
 
 async function getStore() {
   if (!Store) Store = (await import('electron-store')).default;
-  return new Store({ name: 'framevault-library', defaults: { folders: [], items: [], collections: [] } });
+  return new Store({ name: 'projecta-library', defaults: { folders: [], items: [], collections: [] } });
 }
 
 async function probe(file) {

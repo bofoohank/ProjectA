@@ -1,5 +1,5 @@
 {
-  "name": "framevault",
+  "name": "projecta",
   "version": "0.1.0",
   "private": true,
   "description": "Local SFX and video library for editors",
@@ -30,10 +30,10 @@
     "wait-on": "latest"
   },
   "build": {
-    "appId": "com.framevault.desktop",
-    "productName": "FrameVault",
+    "appId": "com.projecta.desktop",
+    "productName": "ProjectA",
     "files": ["dist/**/*", "electron/**/*", "package.json"],
     "asarUnpack": ["node_modules/ffmpeg-static/**/*", "node_modules/ffprobe-static/**/*"],
-    "win": { "target": "portable", "artifactName": "FrameVault-${version}.exe" }
+    "win": { "target": "portable", "artifactName": "ProjectA-${version}.exe" }
   }
 }

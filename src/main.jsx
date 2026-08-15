@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { FolderPlus, RefreshCw, Search, SlidersHorizontal, Star, Folder, Volume2, Film, Plug, Wrench, Grid3X3, List, X, Heart, Play, Pause, MoreHorizontal, AlertTriangle, Copy, Tags, Plus } from 'lucide-react';
 import './styles.css';
 
-const api = window.frameVault || createDemoApi();
+const api = window.projectA || createDemoApi();
 const fmtTime = s => !s ? '—' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const fmtSize = n => n > 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${(n / 1e6).toFixed(1)} MB`;
 const fileUrl = path => encodeURI(`file:///${path.replaceAll('\\', '/')}`);
@@ -46,7 +46,7 @@ function App() {
   async function addCollection() { const name = prompt('Tên collection'); if (name) { const collections = await api.addCollection(name); setState(s => ({ ...s, collections })); } }
 
   return <div className="app">
-    <header className="titlebar"><div className="brand-mark"><span /></div><b>FrameVault</b><span className="beta">BETA</span></header>
+    <header className="titlebar"><div className="brand-mark"><span /></div><b>ProjectA</b><span className="beta">BETA</span></header>
     <aside className="sidebar">
       <div className="nav-main">
         <Nav icon={Volume2} label="SFX" active={section==='sfx'} count={state.items.filter(x=>x.kind==='sfx').length} onClick={()=>setSection('sfx')} />
@@ -76,7 +76,7 @@ function App() {
 }
 
 function Nav({icon:Icon,label,active,count,disabled,onClick}) { return <button className={`nav ${active?'active':''} ${disabled?'disabled':''}`} onClick={onClick} disabled={disabled}><Icon size={20}/><span>{label}</span>{count!==undefined&&<em>{count}</em>}{disabled&&<small>Sắp có</small>}</button> }
-function Empty({onAdd}) { return <div className="empty"><div className="empty-art"><FolderPlus size={44}/></div><h2>Tạo thư viện media của bạn</h2><p>Thêm một hoặc nhiều thư mục. FrameVault sẽ tự phân loại audio vào SFX, GIF và clip vào Video.</p><button onClick={onAdd}><FolderPlus size={18}/> Chọn thư mục</button><small>File gốc sẽ không bị chỉnh sửa hoặc di chuyển.</small></div> }
+function Empty({onAdd}) { return <div className="empty"><div className="empty-art"><FolderPlus size={44}/></div><h2>Tạo thư viện media của bạn</h2><p>Thêm một hoặc nhiều thư mục. ProjectA sẽ tự phân loại audio vào SFX, GIF và clip vào Video.</p><button onClick={onAdd}><FolderPlus size={18}/> Chọn thư mục</button><small>File gốc sẽ không bị chỉnh sửa hoặc di chuyển.</small></div> }
 function FilterBar({filters,setFilters,extensions}) { const change=(k,v)=>setFilters(f=>({...f,[k]:v})); return <div className="filters"><label><span>Định dạng</span><select value={filters.ext} onChange={e=>change('ext',e.target.value)}><option value="all">Tất cả</option>{extensions.map(x=><option key={x}>{x}</option>)}</select></label><label><span>Thời lượng</span><select value={filters.duration} onChange={e=>change('duration',e.target.value)}><option value="all">Tất cả</option><option value="short">Dưới 10 giây</option><option value="medium">10–60 giây</option><option value="long">Trên 1 phút</option></select></label><label><span>Sắp xếp</span><select value={filters.sort} onChange={e=>change('sort',e.target.value)}><option value="newest">Mới thêm</option><option value="name">Tên A–Z</option><option value="duration">Thời lượng</option></select></label><button className={filters.favorite?'chip on':'chip'} onClick={()=>change('favorite',!filters.favorite)}><Star size={14}/> Yêu thích</button><button className={filters.issue?'chip on':'chip'} onClick={()=>change('issue',!filters.issue)}><AlertTriangle size={14}/> Cần xử lý</button></div> }
 
 function MediaCard({item,section,selected,playing,onSelect,onFavorite,onPlay}) {
