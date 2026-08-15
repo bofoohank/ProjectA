@@ -46,7 +46,7 @@ function App() {
   async function addCollection() { const name = prompt('Tên collection'); if (name) { const collections = await api.addCollection(name); setState(s => ({ ...s, collections })); } }
 
   return <div className="app">
-    <header className="titlebar"><div className="brand-mark"><span /></div><b>ProjectA</b><span className="beta">BETA</span></header>
+    <header className="titlebar"><div className="brand-mark" style={{width:24,height:24,border:0,overflow:'hidden'}}><img src="./icon.png" alt="" style={{width:'100%',height:'100%',display:'block',objectFit:'cover'}} /></div><b>ProjectA</b><span className="beta">BETA</span></header>
     <aside className="sidebar">
       <div className="nav-main">
         <Nav icon={Volume2} label="SFX" active={section==='sfx'} count={state.items.filter(x=>x.kind==='sfx').length} onClick={()=>setSection('sfx')} />
