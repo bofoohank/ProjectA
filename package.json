@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build",
-    "dist:win": "vite build && electron-builder --win portable",
-    "dist:mac": "vite build && electron-builder --mac dmg zip --arm64",
+    "dist:win": "vite build && electron-builder --win portable --publish never",
+    "dist:mac": "vite build && electron-builder --mac dmg zip --arm64 --publish never",
     "preview": "vite preview",
     "test": "vitest run"
   },
