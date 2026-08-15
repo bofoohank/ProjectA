@@ -32,8 +32,8 @@
   "build": {
     "appId": "com.projecta.desktop",
     "productName": "ProjectA",
-    "files": ["dist/**/*", "electron/**/*", "package.json"],
+    "files": ["dist/**/*", "electron/**/*", "build/icon.ico", "package.json"],
     "asarUnpack": ["node_modules/ffmpeg-static/**/*", "node_modules/ffprobe-static/**/*"],
-    "win": { "target": "portable", "artifactName": "ProjectA-${version}.exe" }
+    "win": { "target": "portable", "artifactName": "ProjectA-${version}.exe", "icon": "build/icon.ico" }
   }
 }
