@@ -26,11 +26,13 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('projecta-dark-mode') !== 'false');
   const [accent, setAccent] = useState(() => localStorage.getItem('projecta-accent') || '#52d5a8');
+  const [volume, setVolume] = useState(() => Number(localStorage.getItem('projecta-preview-volume') ?? 80));
 
   const load = async () => setState(await api.getState());
   useEffect(() => { load(); api.onScanProgress?.(setScan); api.onLibraryUpdated?.(next=>{setState(next);setScan(null)}); api.onDragError?.(message => { setDragError(message); setTimeout(() => setDragError(''), 5000); }); }, []);
   useEffect(() => { const close=()=>setContextMenu(null); window.addEventListener('blur',close); document.addEventListener('click',close); return()=>{window.removeEventListener('blur',close);document.removeEventListener('click',close)}; }, []);
   useEffect(() => { document.documentElement.classList.toggle('light-mode', !darkMode); document.documentElement.style.setProperty('--accent', accent); localStorage.setItem('projecta-dark-mode', String(darkMode)); localStorage.setItem('projecta-accent', accent); api.setTheme?.(darkMode); window.dispatchEvent(new Event('projecta-theme-change')); }, [darkMode,accent]);
+  useEffect(() => { localStorage.setItem('projecta-preview-volume', String(volume)); }, [volume]);
   const sectionItems = useMemo(() => state.items.filter(x => x.kind === section), [state.items, section]);
   const categories = useMemo(() => [...new Set(sectionItems.map(x => x.category).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi')).map(name => ({ name, count: sectionItems.filter(x => x.category === name).length })), [sectionItems]);
   const items = useMemo(() => {
@@ -80,13 +82,13 @@ function App() {
       <div style={{position:'sticky',top:-24,zIndex:4,background:darkMode?'#0b0d10':'#f4f6f8',paddingTop:24,marginTop:-24,paddingBottom:4,borderBottom:darkMode?'1px solid #20252d':'1px solid #d8dde4'}}>
         <div className="toolbar">
           <div><h1>{section === 'sfx' ? 'Sound Effects' : 'Video Library'}</h1><p>{items.length} mục</p></div>
-          <div className="actions"><div className="search"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm tên, tag…"/><kbd>⌘ K</kbd></div><button className={filtersOpen?'active':''} onClick={()=>setFiltersOpen(x=>!x)}><SlidersHorizontal size={18}/></button><button onClick={rescan}><RefreshCw size={18}/></button><div className="seg"><button className={view==='grid'?'active':''} onClick={()=>setView('grid')}><Grid3X3 size={17}/></button><button className={view==='list'?'active':''} onClick={()=>setView('list')}><List size={18}/></button></div></div>
+          <div className="actions"><label className="volume-control" title={`Âm lượng preview: ${volume}%`}><Volume2 size={17}/><input aria-label="Âm lượng preview" type="range" min="0" max="100" value={volume} onChange={e=>setVolume(Number(e.target.value))} style={{'--volume-progress':`${volume}%`}}/><span>{volume}</span></label><div className="search"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm tên, tag…"/><kbd>⌘ K</kbd></div><button className={filtersOpen?'active':''} onClick={()=>setFiltersOpen(x=>!x)}><SlidersHorizontal size={18}/></button><button onClick={rescan}><RefreshCw size={18}/></button><div className="seg"><button className={view==='grid'?'active':''} onClick={()=>setView('grid')}><Grid3X3 size={17}/></button><button className={view==='list'?'active':''} onClick={()=>setView('list')}><List size={18}/></button></div></div>
         </div>
         <CategoryBar categories={categories} active={category} total={sectionItems.length} onSelect={setCategory} onRename={renameCategory}/>
         {filtersOpen && <FilterBar filters={filters} setFilters={setFilters} extensions={extensions}/>}
       </div>
       {state.folders.length === 0 ? <Empty onAdd={choose}/> : items.length === 0 ? <div className="no-results">Không tìm thấy media phù hợp.</div> :
-        <div className={`media-${view}`}>{items.map(item=><MediaCard key={item.id} item={item} section={section} onFavorite={()=>patchItem(item.id,{favorite:!item.favorite})} onContextMenu={e=>{e.preventDefault();setContextMenu({x:e.clientX,y:e.clientY,item})}}/>)}</div>}
+        <div className={`media-${view}`}>{items.map(item=><MediaCard key={item.id} item={item} section={section} volume={volume / 100} onFavorite={()=>patchItem(item.id,{favorite:!item.favorite})} onContextMenu={e=>{e.preventDefault();setContextMenu({x:e.clientX,y:e.clientY,item})}}/>)}</div>}
     </main>
     {selected && <Inspector item={selected} categories={categories} collections={state.collections} onClose={()=>setSelected(null)} onPatch={p=>patchItem(selected.id,p)} />}
     {contextMenu && <MediaContextMenu data={contextMenu} categories={categories} onClose={()=>setContextMenu(null)} onDetails={()=>{setSelected(contextMenu.item);setContextMenu(null)}} onPatch={p=>{patchItem(contextMenu.item.id,p);setContextMenu(null)}} />}
@@ -101,7 +103,7 @@ function CategoryBar({categories,active,total,onSelect,onRename}) { const wrap={
 function Empty({onAdd}) { return <div className="empty"><div className="empty-art"><FolderPlus size={44}/></div><h2>Tạo thư viện media của bạn</h2><p>Thêm một hoặc nhiều thư mục. ProjectA sẽ tự phân loại audio vào SFX, GIF và clip vào Video.</p><button onClick={onAdd}><FolderPlus size={18}/> Chọn thư mục</button><small>File gốc sẽ không bị chỉnh sửa hoặc di chuyển.</small></div> }
 function FilterBar({filters,setFilters,extensions}) { const change=(k,v)=>setFilters(f=>({...f,[k]:v})); return <div className="filters"><label><span>Định dạng</span><select value={filters.ext} onChange={e=>change('ext',e.target.value)}><option value="all">Tất cả</option>{extensions.map(x=><option key={x}>{x}</option>)}</select></label><label><span>Thời lượng</span><select value={filters.duration} onChange={e=>change('duration',e.target.value)}><option value="all">Tất cả</option><option value="short">Dưới 10 giây</option><option value="medium">10–60 giây</option><option value="long">Trên 1 phút</option></select></label><label><span>Sắp xếp</span><select value={filters.sort} onChange={e=>change('sort',e.target.value)}><option value="newest">Mới thêm</option><option value="name">Tên A–Z</option><option value="duration">Thời lượng</option></select></label><button className={filters.favorite?'chip on':'chip'} onClick={()=>change('favorite',!filters.favorite)}><Star size={14}/> Yêu thích</button><button className={filters.issue?'chip on':'chip'} onClick={()=>change('issue',!filters.issue)}><AlertTriangle size={14}/> Cần xử lý</button></div> }
 
-function MediaCard({item,section,onFavorite,onContextMenu}) {
+function MediaCard({item,section,volume,onFavorite,onContextMenu}) {
   const audio = useRef(); const canvas = useRef(); const video = useRef(); const scrubLine = useRef(); const card = useRef();
   const [nearViewport,setNearViewport] = useState(false);
   const [themeTick,setThemeTick] = useState(0);
@@ -109,7 +111,7 @@ function MediaCard({item,section,onFavorite,onContextMenu}) {
   useEffect(()=>{const update=()=>setThemeTick(x=>x+1);window.addEventListener('projecta-theme-change',update);return()=>window.removeEventListener('projecta-theme-change',update)},[]);
   useEffect(()=>{ if(section==='sfx'&&nearViewport) drawWave(canvas.current,item.path,item.hash); },[item.path,item.hash,section,nearViewport,themeTick]);
   function ensureMedia(){const media=section==='sfx'?audio.current:video.current;if(media&&!media.getAttribute('src'))media.src=fileUrl(item.path);return media;}
-  function enter(){ if(item.missing)return;const media=ensureMedia();if(media){media.volume=1;media.play().catch(()=>{});} }
+  function enter(){ if(item.missing)return;const media=ensureMedia();if(media){media.volume=volume;media.play().catch(()=>{});} }
   function scrubPreview(e){ if(item.missing)return; const box=e.currentTarget.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(e.clientX-box.left)/box.width));if(scrubLine.current){scrubLine.current.style.display='block';scrubLine.current.style.left=`${ratio*100}%`;}const media=ensureMedia();if(media&&Number.isFinite(media.duration))media.currentTime=ratio*media.duration; }
   function leave(){ if(scrubLine.current){scrubLine.current.style.display='none';scrubLine.current.style.left='0%';} if(audio.current){audio.current.pause();audio.current.currentTime=0;} if(video.current){video.current.pause();video.current.currentTime=0;} }
   return <article ref={card} className={`card ${item.missing?'missing':''}`} title={item.missing?'File không còn ở vị trí cũ':'Di chuột để phát · Rê ngang preview để scrub'} onContextMenu={onContextMenu} onMouseEnter={enter} onMouseLeave={leave} draggable={!item.missing} onDragStart={e=>{e.preventDefault();e.stopPropagation();api.dragFile(item.path);}}>

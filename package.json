@@ -37,7 +37,7 @@
     "files": ["dist/**/*", "electron/**/*", "build/icon.ico", "build/icon.png", "package.json"],
     "asarUnpack": ["node_modules/ffmpeg-static/**/*", "node_modules/ffprobe-static/**/*"],
     "win": { "target": "portable", "artifactName": "ProjectA-${version}-Windows.exe", "icon": "build/icon.ico" },
-    "mac": { "target": ["dmg", "zip"], "artifactName": "ProjectA-${version}-macOS-${arch}.${ext}", "icon": "build/icon.png", "category": "public.app-category.video", "identity": null },
+    "mac": { "target": ["dmg", "zip"], "artifactName": "ProjectA-${version}-macOS-${arch}.${ext}", "icon": "build/icon-mac.png", "category": "public.app-category.video", "identity": null },
     "dmg": { "title": "ProjectA ${version}" }
   }
 }
