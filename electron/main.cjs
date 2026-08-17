@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
+const { AUDIO, isMediaFile, mediaPathKey, categoryFromPath, collapseDuplicates, createScannedItem, sanitizeItemPatch, isPathInside } = require('./library.cjs');
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
@@ -10,8 +11,6 @@ let win;
 let Store;
 let watchTimer;
 const folderWatchers = new Map();
-const AUDIO = new Set(['.wav', '.mp3', '.flac', '.aac', '.m4a', '.ogg', '.wma']);
-const VIDEO = new Set(['.mp4', '.mov', '.mkv', '.avi', '.webm', '.m4v', '.gif']);
 
 async function getStore() {
   if (!Store) Store = (await import('electron-store')).default;
@@ -78,28 +77,10 @@ function walk(root) {
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) stack.push(full);
-      else if (AUDIO.has(path.extname(entry.name).toLowerCase()) || VIDEO.has(path.extname(entry.name).toLowerCase())) result.push(full);
+      else if (isMediaFile(full)) result.push(full);
     }
   }
   return result;
-}
-
-function categoryFromPath(file) { return path.basename(path.dirname(file)) || 'Khác'; }
-function normalizedMediaName(name) { return path.basename(name, path.extname(name)).toLowerCase().replace(/\b(copy|duplicate|ban sao)\b/g, '').replace(/\s*\(\d+\)\s*$/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
-function waveformSimilarity(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || !a.length) return 0;
-  let dot = 0, aa = 0, bb = 0;
-  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; aa += a[i] * a[i]; bb += b[i] * b[i]; }
-  return aa && bb ? dot / Math.sqrt(aa * bb) : 0;
-}
-function collapseDuplicates(items) {
-  const visible = [], duplicates = [];
-  for (const item of items) {
-    if (item.missing) { visible.push(item); continue; }
-    const match = visible.find(saved => !saved.missing && (saved.hash === item.hash || (normalizedMediaName(saved.name) === normalizedMediaName(item.name) && Math.abs((saved.duration || 0) - (item.duration || 0)) <= Math.max(.18, (saved.duration || 0) * .015) && waveformSimilarity(saved.waveformSignature, item.waveformSignature) >= .985)));
-    if (match) duplicates.push({ ...item, duplicateOf: match.id }); else visible.push(item);
-  }
-  return { visible, duplicates };
 }
 
 async function waveformSignature(file) {
@@ -130,31 +111,24 @@ async function fingerprint(file) {
 
 async function scanLibrary() {
   const store = await getStore();
-  const old = new Map([...store.get('items'), ...store.get('duplicates', [])].map(x => [x.path.toLowerCase(), x]));
+  const old = new Map([...store.get('items'), ...store.get('duplicates', [])].map(x => [mediaPathKey(x.path), x]));
   const files = [...new Set(store.get('folders').flatMap(walk))];
   const items = [];
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
     const ext = path.extname(file).toLowerCase();
     const stat = fs.statSync(file);
-    const saved = old.get(file.toLowerCase()) || {};
+    const saved = old.get(mediaPathKey(file)) || {};
     const unchanged = saved.id && saved.size === stat.size && saved.modifiedAt === stat.mtimeMs;
     const hash = unchanged && saved.hash ? saved.hash : await fingerprint(file);
     const meta = unchanged && saved.duration !== undefined ? {} : await probe(file);
-    const stream = meta.streams?.find(s => s.codec_type === 'video') || {};
-    const duration = saved.duration ?? Number(meta.format?.duration || 0);
     const signature = AUDIO.has(ext) ? (unchanged && saved.waveformSignature?.length ? saved.waveformSignature : await waveformSignature(file)) : [];
-    const item = {
-      id: saved.id || crypto.randomUUID(), path: file, name: path.basename(file), ext: ext.slice(1),
-      kind: AUDIO.has(ext) ? 'sfx' : 'video', size: stat.size, modifiedAt: stat.mtimeMs,
-      addedAt: saved.addedAt || Date.now(), duration, width: stream.width || saved.width || 0,
-      height: stream.height || saved.height || 0, hash, favorite: saved.favorite || false,
-      tags: saved.tags || [], collections: saved.collections || [], category: saved.category || categoryFromPath(file), waveformSignature: signature, missing: false
-    };
+    const item = createScannedItem({ file, stat, saved, hash, metadata: meta, waveformSignature: signature, createId: crypto.randomUUID });
     items.push(item);
     win?.webContents.send('scan:progress', { current: index + 1, total: files.length, name: item.name });
   }
-  for (const saved of old.values()) if (!saved.duplicateOf && !files.some(f => f.toLowerCase() === saved.path.toLowerCase())) items.push({ ...saved, missing: true });
+  const scannedKeys = new Set(files.map(mediaPathKey));
+  for (const saved of old.values()) if (!saved.duplicateOf && !scannedKeys.has(mediaPathKey(saved.path))) items.push({ ...saved, missing: true });
   const collapsed = collapseDuplicates(items);
   store.set('items', collapsed.visible);
   store.set('duplicates', collapsed.duplicates);
@@ -208,7 +182,7 @@ ipcMain.handle('library:clear', async () => { const s = await getStore(); s.set(
 ipcMain.handle('library:remove-folder', async (_, folder) => {
   const s = await getStore(), target = path.resolve(String(folder || ''));
   const folders = s.get('folders').filter(x => path.resolve(x).toLowerCase() !== target.toLowerCase());
-  const inside = file => { const relative = path.relative(target, file); return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative)); };
+  const inside = file => isPathInside(target, file);
   s.set('folders', folders);
   s.set('items', s.get('items').filter(item => !inside(item.path)));
   s.set('duplicates', s.get('duplicates', []).filter(item => !inside(item.path)));
@@ -216,7 +190,7 @@ ipcMain.handle('library:remove-folder', async (_, folder) => {
   watchFolders(folders);
   return scanLibrary();
 });
-ipcMain.handle('library:update-item', async (_, id, patch) => { const s = await getStore(); const items = s.get('items').map(x => x.id === id ? { ...x, ...patch } : x); s.set('items', items); return items.find(x => x.id === id); });
+ipcMain.handle('library:update-item', async (_, id, patch) => { const s = await getStore(), safePatch = sanitizeItemPatch(patch); const items = s.get('items').map(x => x.id === id ? { ...x, ...safePatch } : x); s.set('items', items); return items.find(x => x.id === id); });
 ipcMain.handle('library:rename-category', async (_, kind, oldName, newName) => { const s = await getStore(); const name = String(newName || '').trim(); if (!name) throw new Error('Tên danh mục không được để trống.'); const items = s.get('items').map(x => x.kind === kind && x.category === oldName ? { ...x, category: name } : x); s.set('items', items); return items; });
 ipcMain.handle('library:add-collection', async (_, name) => { const s = await getStore(); const collections = [...new Set([...s.get('collections'), name.trim()])].filter(Boolean); s.set('collections', collections); return collections; });
 ipcMain.handle('library:export', async () => {

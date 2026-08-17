@@ -1,0 +1,8 @@
+.side-link.active {
+  background: #191d23;
+  color: #e9fff7;
+}
+
+.side-link.active svg {
+  color: #52e4b1;
+}

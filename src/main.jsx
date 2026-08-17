@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { FolderPlus, FolderMinus, RefreshCw, Search, SlidersHorizontal, Star, Folder, Volume2, Film, Plug, Wrench, Grid3X3, List, X, Heart, MoreHorizontal, AlertTriangle, Copy, Tags, Plus, Pencil, Info, FolderInput, Settings as SettingsIcon, Download, Trash2, Moon, Palette, Save } from 'lucide-react';
+import { FolderPlus, FolderMinus, RefreshCw, Search, SlidersHorizontal, Star, Folder, Volume2, Grid3X3, List, X, AlertTriangle, Copy, Tags, Pencil, Info, FolderInput, Download, Trash2, Moon, Palette, Save } from 'lucide-react';
+import Sidebar from './components/Sidebar.jsx';
+import FilterBar from './components/FilterBar.jsx';
 import './styles.css';
 import './theme.css';
 
@@ -14,6 +16,7 @@ let waveActive = 0, waveAudioContext;
 function App() {
   const [state, setState] = useState({ folders: [], items: [], collections: [] });
   const [section, setSection] = useState('sfx');
+  const [libraryFilter, setLibraryFilter] = useState({ type: 'all' });
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [view, setView] = useState('grid');
@@ -38,6 +41,8 @@ function App() {
   const items = useMemo(() => {
     let rows = sectionItems;
     if (category !== 'all') rows = rows.filter(x => x.category === category);
+    if (libraryFilter.type === 'favorite') rows = rows.filter(x => x.favorite);
+    if (libraryFilter.type === 'collection') rows = rows.filter(x => x.collections.includes(libraryFilter.value));
     const q = query.toLowerCase().trim();
     if (q) rows = rows.filter(x => `${x.name} ${x.tags.join(' ')}`.toLowerCase().includes(q));
     if (filters.favorite) rows = rows.filter(x => x.favorite);
@@ -47,7 +52,7 @@ function App() {
     if (filters.duration === 'medium') rows = rows.filter(x => x.duration >= 10 && x.duration <= 60);
     if (filters.duration === 'long') rows = rows.filter(x => x.duration > 60);
     return rows.sort((a,b) => filters.sort === 'name' ? a.name.localeCompare(b.name) : filters.sort === 'duration' ? b.duration-a.duration : b.addedAt-a.addedAt);
-  }, [sectionItems, category, query, filters]);
+  }, [sectionItems, category, libraryFilter, query, filters]);
   const extensions = [...new Set(state.items.filter(x => x.kind === section).map(x => x.ext))];
 
   async function patchItem(id, patch) {
@@ -65,19 +70,7 @@ function App() {
 
   return <div className={`app platform-${api.platform||'browser'}`}>
     <header className="titlebar"><div className="brand-mark" style={{width:24,height:24,border:0,overflow:'hidden'}}><img src="./icon.png" alt="" style={{width:'100%',height:'100%',display:'block',objectFit:'cover'}} /></div><b>ProjectA</b><span className="beta">BETA</span></header>
-    <aside className="sidebar">
-      <div className="nav-main">
-        <Nav icon={Volume2} label="SFX" active={section==='sfx'} count={state.items.filter(x=>x.kind==='sfx').length} onClick={()=>changeSection('sfx')} />
-        <Nav icon={Film} label="Video" active={section==='video'} count={state.items.filter(x=>x.kind==='video').length} onClick={()=>changeSection('video')} />
-        <Nav icon={Plug} label="Plugin" disabled /><Nav icon={Wrench} label="Tool" disabled />
-      </div>
-      <div className="side-label">THƯ VIỆN</div>
-      <button className="side-link"><Grid3X3 size={17}/>Tất cả</button>
-      <button className="side-link"><Heart size={17}/>Yêu thích</button>
-      <div className="side-label row">COLLECTIONS <button onClick={addCollection}><Plus size={14}/></button></div>
-      {state.collections.map(c=><button className="side-link" key={c}><Folder size={17}/>{c}</button>)}
-      <div className="sidebar-bottom"><button className="side-link" onClick={()=>setSettingsOpen(true)}><SettingsIcon size={18}/> Settings</button><small style={{padding:'6px 0',color:'var(--muted)',fontWeight:600,letterSpacing:'.04em'}}>@xh4nk</small></div>
-    </aside>
+    <Sidebar items={state.items} section={section} onSection={changeSection} libraryFilter={libraryFilter} onLibraryFilter={setLibraryFilter} collections={state.collections} onAddCollection={addCollection} onSettings={() => setSettingsOpen(true)} />
     <main>
       <div style={{position:'sticky',top:-24,zIndex:4,background:darkMode?'#0b0d10':'#f4f6f8',paddingTop:24,marginTop:-24,paddingBottom:4,borderBottom:darkMode?'1px solid #20252d':'1px solid #d8dde4'}}>
         <div className="toolbar">
@@ -98,10 +91,8 @@ function App() {
   </div>;
 }
 
-function Nav({icon:Icon,label,active,count,disabled,onClick}) { return <button className={`nav ${active?'active':''} ${disabled?'disabled':''}`} onClick={onClick} disabled={disabled}><Icon size={20}/><span>{label}</span>{count!==undefined&&<em>{count}</em>}{disabled&&<small>Sắp có</small>}</button> }
 function CategoryBar({categories,active,total,onSelect,onRename}) { const wrap={display:'flex',alignItems:'center',gap:7,overflowX:'auto',padding:'2px 0 15px',marginBottom:3}; const tab=on=>({display:'flex',alignItems:'center',gap:7,height:32,padding:'0 11px',borderRadius:8,border:`1px solid ${on?'var(--accent)':'#292f37'}`,background:on?'color-mix(in srgb,var(--accent) 18%, #13171c)':'#13171c',color:on?'var(--accent)':'#8b949f',fontSize:11,cursor:'pointer',whiteSpace:'nowrap'}); return <div className="category-bar" style={wrap}><button className="category-tab" style={tab(active==='all')} onClick={()=>onSelect('all')}>Tất cả <small>{total}</small></button>{categories.map(c=><div key={c.name} style={{display:'flex',alignItems:'center',position:'relative'}}><button className="category-tab" style={{...tab(active===c.name),paddingRight:active===c.name?31:11}} onClick={()=>onSelect(c.name)}>{c.name} <small>{c.count}</small></button>{active===c.name&&<button title="Đổi tên danh mục" onClick={()=>onRename(c.name)} style={{position:'absolute',right:5,width:23,height:23,padding:0,display:'grid',placeItems:'center',border:0,background:'transparent',color:'var(--accent)',cursor:'pointer'}}><Pencil size={12}/></button>}</div>)}</div> }
 function Empty({onAdd}) { return <div className="empty"><div className="empty-art"><FolderPlus size={44}/></div><h2>Tạo thư viện media của bạn</h2><p>Thêm một hoặc nhiều thư mục. ProjectA sẽ tự phân loại audio vào SFX, GIF và clip vào Video.</p><button onClick={onAdd}><FolderPlus size={18}/> Chọn thư mục</button><small>File gốc sẽ không bị chỉnh sửa hoặc di chuyển.</small></div> }
-function FilterBar({filters,setFilters,extensions}) { const change=(k,v)=>setFilters(f=>({...f,[k]:v})); return <div className="filters"><label><span>Định dạng</span><select value={filters.ext} onChange={e=>change('ext',e.target.value)}><option value="all">Tất cả</option>{extensions.map(x=><option key={x}>{x}</option>)}</select></label><label><span>Thời lượng</span><select value={filters.duration} onChange={e=>change('duration',e.target.value)}><option value="all">Tất cả</option><option value="short">Dưới 10 giây</option><option value="medium">10–60 giây</option><option value="long">Trên 1 phút</option></select></label><label><span>Sắp xếp</span><select value={filters.sort} onChange={e=>change('sort',e.target.value)}><option value="newest">Mới thêm</option><option value="name">Tên A–Z</option><option value="duration">Thời lượng</option></select></label><button className={filters.favorite?'chip on':'chip'} onClick={()=>change('favorite',!filters.favorite)}><Star size={14}/> Yêu thích</button><button className={filters.issue?'chip on':'chip'} onClick={()=>change('issue',!filters.issue)}><AlertTriangle size={14}/> Cần xử lý</button></div> }
 
 function MediaCard({item,section,volume,onFavorite,onContextMenu}) {
   const audio = useRef(); const canvas = useRef(); const video = useRef(); const scrubLine = useRef(); const card = useRef();
